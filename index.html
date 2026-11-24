@@ -40,7 +40,6 @@
     color: #546e7a;
     margin: 14px 0 8px 0;
   }
-  /* 段選択グリッド */
   .dan-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -83,7 +82,6 @@
   }
   .multi-btn:active { transform: scale(0.98); }
 
-  /* クイズ画面 */
   .screen { display: none; }
   .screen.active { display: block; }
 
@@ -221,8 +219,41 @@
     font-size: 32px;
     font-weight: bold;
     color: #e91e63;
-    margin: 10px 0 18px 0;
+    margin: 10px 0 14px 0;
   }
+  /* タップで開くクリア時間エリア */
+  .time-reveal-area {
+    margin: 0 auto 18px auto;
+    max-width: 320px;
+  }
+  .btn-show-time {
+    width: 100%;
+    padding: 11px 16px;
+    font-size: 16px;
+    font-weight: bold;
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 2px dashed #64b5f6;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .btn-show-time:active {
+    transform: scale(0.98);
+  }
+  .time-display-box {
+    display: none;
+    padding: 10px 16px;
+    background: #f0f7ff;
+    border: 2px solid #90caf9;
+    border-radius: 12px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #0d47a1;
+  }
+  .time-display-box.open {
+    display: block;
+  }
+
   .perfect-badge {
     display: inline-block;
     background: #fff8e1;
@@ -395,6 +426,12 @@
       <div id="result-mode-name" style="font-size:16px; color:#546e7a; font-weight:bold;"></div>
       <div class="score-text" id="score-text">10もん中 8もん せいかい！</div>
 
+      <!-- タップして開くクリア時間 -->
+      <div class="time-reveal-area">
+        <button class="btn-show-time" id="btn-show-time">⏱ かかった じかんを見る</button>
+        <div class="time-display-box" id="time-display-box">⏱ 0.0 びょう</div>
+      </div>
+
       <div id="perfect-area" style="display:none;">
         <div class="perfect-badge">💮 ぜんもん せいかい！すごい！ 💮</div>
       </div>
@@ -448,8 +485,9 @@
   var correctCount = 0;
   var wrongHistory = [];
   var answeredCurrent = false;
+  var startTimeMs = 0;
+  var endTimeMs = 0;
 
-  // 1〜9の段ボタンを生成
   var singleGrid = document.getElementById('single-dan-grid');
   for (var d = 1; d <= 9; d++) {
     (function(dan) {
@@ -461,7 +499,6 @@
     })(d);
   }
 
-  // 複数・全部まとめボタン
   document.querySelectorAll('.multi-btn').forEach(function(btn) {
     btn.onclick = function() {
       startQuiz(btn.dataset.mode);
@@ -482,7 +519,6 @@
     return mode + ' のだん';
   }
 
-  // 配列シャッフル
   function shuffle(arr) {
     var a = arr.slice();
     for (var i = a.length - 1; i > 0; i--) {
@@ -494,7 +530,6 @@
     return a;
   }
 
-  // 問題リスト（10問）を生成
   function buildQuestions(mode) {
     var dans = [];
     if (mode === '2-5') dans = [2, 3, 4, 5];
@@ -509,12 +544,10 @@
       }
     });
 
-    // 1段だけの場合は9通りしかないので、ランダムな9問＋もう1問をランダム追加して10問にする
     var selected = [];
     if (pool.length < TOTAL_QUESTIONS) {
       selected = shuffle(pool);
       var extra = pool[Math.floor(Math.random() * pool.length)];
-      // 直前と同じ問題が連続しないように調整
       if (selected[selected.length - 1].b === extra.b) {
         extra = pool[(extra.b) % pool.length];
       }
@@ -525,19 +558,14 @@
     return selected;
   }
 
-  // 子どもが間違いやすい4択を生成（隣の段・前後の答え・一の位が同じ数字）
   function generateChoices(a, b, ans) {
     var candidates = [];
 
-    // 1. 同じ段の前後 (a × (b±1))
     if (b > 1) candidates.push(a * (b - 1));
     if (b < 9) candidates.push(a * (b + 1));
-
-    // 2. 隣の段の同じかける数 ((a±1) × b)
     if (a > 1) candidates.push((a - 1) * b);
     if (a < 9) candidates.push((a + 1) * b);
 
-    // 3. 一の位が同じ九九の答え（例: 24 に対して 14, 34, 4, 54 など）
     var ones = ans % 10;
     var kukuProducts = [
       1,2,3,4,5,6,7,8,9,10,12,14,15,16,18,20,21,24,25,27,28,30,32,35,36,40,42,45,48,49,54,56,63,64,72,81
@@ -547,14 +575,12 @@
     }));
     sameOnes.forEach(function(n) { candidates.push(n); });
 
-    // 4. それでも足りなければ近い数字や他の九九の答えを追加
     var nearNums = [ans + 2, ans - 2, ans + 10, ans - 10, a + b];
     nearNums.forEach(function(n) {
       if (n > 0 && n <= 81) candidates.push(n);
     });
     shuffle(kukuProducts).forEach(function(n) { candidates.push(n); });
 
-    // 重複と正解を除外して3つの誤答を選ぶ
     var distractors = [];
     for (var i = 0; i < candidates.length; i++) {
       var val = candidates[i];
@@ -573,6 +599,7 @@
     currentIndex = 0;
     correctCount = 0;
     wrongHistory = [];
+    startTimeMs = Date.now();
 
     document.getElementById('quiz-mode-label').textContent = getModeLabel(mode);
     showScreen('screen-quiz');
@@ -611,6 +638,12 @@
 
   function handleAnswer(clickedBtn, selectedVal, q) {
     answeredCurrent = true;
+
+    // 10問目に答えた瞬間のタイムを記録
+    if (currentIndex === TOTAL_QUESTIONS - 1) {
+      endTimeMs = Date.now();
+    }
+
     var allBtns = document.querySelectorAll('.choice-btn');
     allBtns.forEach(function(b) {
       b.disabled = true;
@@ -651,10 +684,34 @@
     showScreen('screen-select');
   };
 
+  function formatElapsedTime(ms) {
+    var totalSec = Math.max(0.1, ms / 1000);
+    if (totalSec < 60) {
+      return '⏱ ' + totalSec.toFixed(1) + ' びょう';
+    } else {
+      var mins = Math.floor(totalSec / 60);
+      var secs = (totalSec % 60).toFixed(1);
+      return '⏱ ' + mins + 'ぷん ' + secs + ' びょう';
+    }
+  }
+
+  var btnShowTime = document.getElementById('btn-show-time');
+  var timeDisplayBox = document.getElementById('time-display-box');
+
+  btnShowTime.onclick = function() {
+    btnShowTime.style.display = 'none';
+    timeDisplayBox.classList.add('open');
+  };
+
   function showResult() {
     showScreen('screen-result');
     document.getElementById('result-mode-name').textContent = '【' + getModeLabel(currentMode) + '】の けっか';
     document.getElementById('score-text').textContent = TOTAL_QUESTIONS + 'もん中 ' + correctCount + 'もん せいかい！';
+
+    // クリア時間の表示を初期状態（ボタン）にリセット
+    btnShowTime.style.display = 'block';
+    timeDisplayBox.classList.remove('open');
+    timeDisplayBox.textContent = formatElapsedTime(endTimeMs - startTimeMs);
 
     var perfectArea = document.getElementById('perfect-area');
     var wrongBox = document.getElementById('wrong-list-box');
@@ -684,7 +741,6 @@
     showScreen('screen-select');
   };
 
-  // 先生用URL生成パネル
   document.getElementById('toggle-teacher').onclick = function() {
     document.getElementById('teacher-box').classList.toggle('open');
   };
@@ -704,7 +760,6 @@
     }
   };
 
-  // URLパラメータ ?d= の判定（例: ?d=3, ?d=2-5, ?d=all）
   var urlParams = new URLSearchParams(window.location.search);
   var dParam = urlParams.get('d');
   if (dParam) {
