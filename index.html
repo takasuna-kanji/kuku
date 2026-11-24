@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>かけ算 九九 4たくクイズ</title>
+<style>
+  * {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  body {
+    font-family: "UD Digi Kyokasho N-R", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+    background-color: #f2f7fb;
+    margin: 0;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #2c3e50;
+  }
+  .container {
+    width: 100%;
+    max-width: 680px;
+    background: #fff;
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+  }
+  h1 {
+    text-align: center;
+    font-size: 24px;
+    margin: 0 0 16px 0;
+    color: #1976d2;
+  }
+  .section-label {
+    font-size: 14px;
+    font-weight: bold;
+    color: #546e7a;
+    margin: 14px 0 8px 0;
+  }
+  /* 段選択グリッド */
+  .dan-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .dan-btn {
+    padding: 14px 8px;
+    font-size: 19px;
+    font-weight: bold;
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 2px solid #90caf9;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.15s;
+  }
+  .dan-btn:hover { background: #bbdefb; }
+  .dan-btn:active { transform: scale(0.96); }
+
+  .multi-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .multi-btn {
+    padding: 14px;
+    font-size: 18px;
+    font-weight: bold;
+    background: #fff3e0;
+    color: #e65100;
+    border: 2px solid #ffb74d;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.15s;
+  }
+  .multi-btn.all-btn {
+    background: #fce4ec;
+    color: #c2185b;
+    border-color: #f48fb1;
+  }
+  .multi-btn:active { transform: scale(0.98); }
+
+  /* クイズ画面 */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px dashed #e0e6ed;
+  }
+  .mode-badge {
+    background: #1976d2;
+    color: #fff;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 15px;
+    font-weight: bold;
+  }
+  .progress-text {
+    font-size: 18px;
+    font-weight: bold;
+    color: #37474f;
+  }
+  .question-box {
+    background: #f8fbff;
+    border: 3px solid #bbdefb;
+    border-radius: 16px;
+    padding: 26px 12px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .question-formula {
+    font-size: 48px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    color: #1a237e;
+  }
+  .feedback-banner {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: bold;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    padding: 8px;
+  }
+  .feedback-correct {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 2px solid #81c784;
+  }
+  .feedback-wrong {
+    background: #ffebee;
+    color: #c62828;
+    border: 2px solid #e57373;
+  }
+  .choices-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .choice-btn {
+    padding: 20px 10px;
+    font-size: 32px;
+    font-weight: bold;
+    background: #fff;
+    color: #263238;
+    border: 3px solid #cfd8dc;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .choice-btn:hover:not(:disabled) {
+    background: #eef6ff;
+    border-color: #64b5f6;
+  }
+  .choice-btn:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+  .choice-btn.correct-ans {
+    background: #c8e6c9;
+    border-color: #2e7d32;
+    color: #1b5e20;
+  }
+  .choice-btn.wrong-ans {
+    background: #ffcdd2;
+    border-color: #c62828;
+    color: #b71c1c;
+  }
+  .choice-btn:disabled {
+    cursor: default;
+  }
+  .quiz-footer {
+    margin-top: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .btn-back {
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: bold;
+    background: #eceff1;
+    color: #455a64;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .btn-next {
+    flex: 1;
+    padding: 14px;
+    font-size: 19px;
+    font-weight: bold;
+    background: #ff9800;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    display: none;
+  }
+  .btn-next.show {
+    display: block;
+  }
+
+  /* 結果画面 */
+  .result-box {
+    text-align: center;
+    padding: 16px 10px;
+  }
+  .score-text {
+    font-size: 32px;
+    font-weight: bold;
+    color: #e91e63;
+    margin: 10px 0 18px 0;
+  }
+  .perfect-badge {
+    display: inline-block;
+    background: #fff8e1;
+    border: 3px solid #ffb300;
+    color: #e65100;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 14px;
+    margin-bottom: 18px;
+  }
+  .wrong-list-box {
+    background: #fff5f5;
+    border: 2px solid #ffcdd2;
+    border-radius: 12px;
+    padding: 14px;
+    text-align: left;
+    margin-bottom: 20px;
+  }
+  .wrong-list-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #c62828;
+    margin-bottom: 8px;
+  }
+  .wrong-item {
+    font-size: 20px;
+    font-weight: bold;
+    padding: 6px 0;
+    border-bottom: 1px dashed #ef9a9a;
+    color: #333;
+  }
+  .wrong-item:last-child {
+    border-bottom: none;
+  }
+  .wrong-item span.ans-highlight {
+    color: #d32f2f;
+  }
+  .result-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .btn-retry {
+    padding: 14px;
+    font-size: 18px;
+    font-weight: bold;
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .btn-home {
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    background: #eceff1;
+    color: #37474f;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+
+  /* 先生用URLパネル */
+  .teacher-panel {
+    margin-top: 20px;
+    width: 100%;
+    max-width: 680px;
+    text-align: center;
+  }
+  .teacher-toggle {
+    background: #fff;
+    border: 1px solid #bbb;
+    color: #555;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+  }
+  .teacher-box {
+    display: none;
+    margin-top: 10px;
+    background: #fff;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid #d0dbe5;
+    text-align: left;
+    font-size: 14px;
+  }
+  .teacher-box.open { display: block; }
+  .teacher-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .teacher-row select {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 15px;
+    border: 1px solid #bbb;
+    border-radius: 8px;
+  }
+  .teacher-row button {
+    padding: 8px 14px;
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  #generated-url-box {
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px;
+    font-size: 14px;
+    background: #f0f4f8;
+    border: 1px solid #bcccdc;
+    border-radius: 6px;
+    color: #102a43;
+    user-select: all;
+    -webkit-user-select: all;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- ① モード選択画面 -->
+  <div id="screen-select" class="screen active">
+    <h1>✖ かけ算 九九 クイズ（10もん）</h1>
+
+    <div class="section-label">■ 1つの だんを えらぶ</div>
+    <div class="dan-grid" id="single-dan-grid"></div>
+
+    <div class="section-label" style="margin-top:18px;">■ はってん：まとめて ちょうせん！</div>
+    <div class="multi-grid">
+      <button class="multi-btn" data-mode="2-5">2 〜 5 のだん まとめて</button>
+      <button class="multi-btn" data-mode="6-9">6 〜 9 のだん まとめて</button>
+      <button class="multi-btn all-btn" data-mode="all">ぜんぶ（1 〜 9 のだん）ランダム</button>
+    </div>
+  </div>
+
+  <!-- ② クイズ画面 -->
+  <div id="screen-quiz" class="screen">
+    <div class="quiz-header">
+      <span class="mode-badge" id="quiz-mode-label">3のだん</span>
+      <span class="progress-text" id="quiz-progress">だい 1 もん / 10もん</span>
+    </div>
+
+    <div class="question-box">
+      <div class="question-formula" id="question-formula">3 × 4 ＝ ？</div>
+    </div>
+
+    <div class="feedback-banner" id="feedback-banner">こたえを えらんでね</div>
+
+    <div class="choices-grid" id="choices-grid"></div>
+
+    <div class="quiz-footer">
+      <button class="btn-back" id="btn-quit">◀ もどる</button>
+      <button class="btn-next" id="btn-next">つぎの もんだいへ ▶</button>
+    </div>
+  </div>
+
+  <!-- ③ 結果画面 -->
+  <div id="screen-result" class="screen">
+    <h1>🎉 けっか はっぴょう</h1>
+    <div class="result-box">
+      <div id="result-mode-name" style="font-size:16px; color:#546e7a; font-weight:bold;"></div>
+      <div class="score-text" id="score-text">10もん中 8もん せいかい！</div>
+
+      <div id="perfect-area" style="display:none;">
+        <div class="perfect-badge">💮 ぜんもん せいかい！すごい！ 💮</div>
+      </div>
+
+      <div class="wrong-list-box" id="wrong-list-box" style="display:none;">
+        <div class="wrong-list-title">📝 まちがえた もんだい（もういちど たしかめよう）</div>
+        <div id="wrong-list"></div>
+      </div>
+
+      <div class="result-actions">
+        <button class="btn-retry" id="btn-retry">🔄 もういちど 同じだんに ちょうせん</button>
+        <button class="btn-home" id="btn-home">🏠 だんを えらぶ画面に もどる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 先生用URL作成パネル -->
+<div class="teacher-panel">
+  <button class="teacher-toggle" id="toggle-teacher">⚙ 先生用：ロイロノート用の指定URLをつくる</button>
+  <div class="teacher-box" id="teacher-box">
+    <div>開いた瞬間にスタートさせたい段を選んで「URLをつくる」を押してください。</div>
+    <div class="teacher-row">
+      <select id="preset-select">
+        <option value="2">2のだん（?d=2）</option>
+        <option value="3" selected>3のだん（?d=3）</option>
+        <option value="4">4のだん（?d=4）</option>
+        <option value="5">5のだん（?d=5）</option>
+        <option value="6">6のだん（?d=6）</option>
+        <option value="7">7のだん（?d=7）</option>
+        <option value="8">8のだん（?d=8）</option>
+        <option value="9">9のだん（?d=9）</option>
+        <option value="1">1のだん（?d=1）</option>
+        <option value="2-5">2〜5のだん まとめて（?d=2-5）</option>
+        <option value="6-9">6〜9のだん まとめて（?d=6-9）</option>
+        <option value="all">ぜんぶランダム（?d=all）</option>
+      </select>
+      <button id="generate-url-btn">URLをつくる</button>
+    </div>
+    <input type="text" id="generated-url-box" readonly placeholder="ここにURLが出ます">
+    <div id="copy-msg" style="margin-top:4px; font-size:12px; color:#1976d2;"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var TOTAL_QUESTIONS = 10;
+  var currentMode = '3';
+  var questions = [];
+  var currentIndex = 0;
+  var correctCount = 0;
+  var wrongHistory = [];
+  var answeredCurrent = false;
+
+  // 1〜9の段ボタンを生成
+  var singleGrid = document.getElementById('single-dan-grid');
+  for (var d = 1; d <= 9; d++) {
+    (function(dan) {
+      var btn = document.createElement('button');
+      btn.className = 'dan-btn';
+      btn.textContent = dan + ' のだん';
+      btn.onclick = function() { startQuiz(String(dan)); };
+      singleGrid.appendChild(btn);
+    })(d);
+  }
+
+  // 複数・全部まとめボタン
+  document.querySelectorAll('.multi-btn').forEach(function(btn) {
+    btn.onclick = function() {
+      startQuiz(btn.dataset.mode);
+    };
+  });
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(function(s) {
+      s.classList.remove('active');
+    });
+    document.getElementById(id).classList.add('active');
+  }
+
+  function getModeLabel(mode) {
+    if (mode === '2-5') return '2〜5のだん まとめて';
+    if (mode === '6-9') return '6〜9のだん まとめて';
+    if (mode === 'all') return 'ぜんぶ（1〜9のだん）';
+    return mode + ' のだん';
+  }
+
+  // 配列シャッフル
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i];
+      a[i] = a[j];
+      a[j] = tmp;
+    }
+    return a;
+  }
+
+  // 問題リスト（10問）を生成
+  function buildQuestions(mode) {
+    var dans = [];
+    if (mode === '2-5') dans = [2, 3, 4, 5];
+    else if (mode === '6-9') dans = [6, 7, 8, 9];
+    else if (mode === 'all') dans = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    else dans = [parseInt(mode, 10) || 2];
+
+    var pool = [];
+    dans.forEach(function(a) {
+      for (var b = 1; b <= 9; b++) {
+        pool.push({ a: a, b: b, ans: a * b });
+      }
+    });
+
+    // 1段だけの場合は9通りしかないので、ランダムな9問＋もう1問をランダム追加して10問にする
+    var selected = [];
+    if (pool.length < TOTAL_QUESTIONS) {
+      selected = shuffle(pool);
+      var extra = pool[Math.floor(Math.random() * pool.length)];
+      // 直前と同じ問題が連続しないように調整
+      if (selected[selected.length - 1].b === extra.b) {
+        extra = pool[(extra.b) % pool.length];
+      }
+      selected.push(extra);
+    } else {
+      selected = shuffle(pool).slice(0, TOTAL_QUESTIONS);
+    }
+    return selected;
+  }
+
+  // 子どもが間違いやすい4択を生成（隣の段・前後の答え・一の位が同じ数字）
+  function generateChoices(a, b, ans) {
+    var candidates = [];
+
+    // 1. 同じ段の前後 (a × (b±1))
+    if (b > 1) candidates.push(a * (b - 1));
+    if (b < 9) candidates.push(a * (b + 1));
+
+    // 2. 隣の段の同じかける数 ((a±1) × b)
+    if (a > 1) candidates.push((a - 1) * b);
+    if (a < 9) candidates.push((a + 1) * b);
+
+    // 3. 一の位が同じ九九の答え（例: 24 に対して 14, 34, 4, 54 など）
+    var ones = ans % 10;
+    var kukuProducts = [
+      1,2,3,4,5,6,7,8,9,10,12,14,15,16,18,20,21,24,25,27,28,30,32,35,36,40,42,45,48,49,54,56,63,64,72,81
+    ];
+    var sameOnes = shuffle(kukuProducts.filter(function(n) {
+      return n !== ans && (n % 10 === ones);
+    }));
+    sameOnes.forEach(function(n) { candidates.push(n); });
+
+    // 4. それでも足りなければ近い数字や他の九九の答えを追加
+    var nearNums = [ans + 2, ans - 2, ans + 10, ans - 10, a + b];
+    nearNums.forEach(function(n) {
+      if (n > 0 && n <= 81) candidates.push(n);
+    });
+    shuffle(kukuProducts).forEach(function(n) { candidates.push(n); });
+
+    // 重複と正解を除外して3つの誤答を選ぶ
+    var distractors = [];
+    for (var i = 0; i < candidates.length; i++) {
+      var val = candidates[i];
+      if (val !== ans && val > 0 && distractors.indexOf(val) === -1) {
+        distractors.push(val);
+        if (distractors.length === 3) break;
+      }
+    }
+
+    return shuffle([ans].concat(distractors));
+  }
+
+  function startQuiz(mode) {
+    currentMode = mode;
+    questions = buildQuestions(mode);
+    currentIndex = 0;
+    correctCount = 0;
+    wrongHistory = [];
+
+    document.getElementById('quiz-mode-label').textContent = getModeLabel(mode);
+    showScreen('screen-quiz');
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    answeredCurrent = false;
+    var q = questions[currentIndex];
+    document.getElementById('quiz-progress').textContent = 'だい ' + (currentIndex + 1) + ' もん / ' + TOTAL_QUESTIONS + 'もん';
+    document.getElementById('question-formula').textContent = q.a + ' × ' + q.b + ' ＝ ？';
+
+    var banner = document.getElementById('feedback-banner');
+    banner.className = 'feedback-banner';
+    banner.textContent = 'こたえを えらんでね';
+
+    var nextBtn = document.getElementById('btn-next');
+    nextBtn.classList.remove('show');
+    nextBtn.textContent = (currentIndex === TOTAL_QUESTIONS - 1) ? 'けっかを みる ▶' : 'つぎの もんだいへ ▶';
+
+    var grid = document.getElementById('choices-grid');
+    grid.innerHTML = '';
+    var choices = generateChoices(q.a, q.b, q.ans);
+
+    choices.forEach(function(choiceVal) {
+      var btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = choiceVal;
+      btn.onclick = function() {
+        if (answeredCurrent) return;
+        handleAnswer(btn, choiceVal, q);
+      };
+      grid.appendChild(btn);
+    });
+  }
+
+  function handleAnswer(clickedBtn, selectedVal, q) {
+    answeredCurrent = true;
+    var allBtns = document.querySelectorAll('.choice-btn');
+    allBtns.forEach(function(b) {
+      b.disabled = true;
+      if (parseInt(b.textContent, 10) === q.ans) {
+        b.classList.add('correct-ans');
+      }
+    });
+
+    var banner = document.getElementById('feedback-banner');
+    if (selectedVal === q.ans) {
+      correctCount++;
+      banner.className = 'feedback-banner feedback-correct';
+      banner.textContent = '⭕ せいかい！';
+    } else {
+      clickedBtn.classList.add('wrong-ans');
+      banner.className = 'feedback-banner feedback-wrong';
+      banner.textContent = '❌ おしい！こたえは ' + q.ans;
+      wrongHistory.push({
+        formula: q.a + ' × ' + q.b,
+        ans: q.ans,
+        yourAns: selectedVal
+      });
+    }
+
+    document.getElementById('btn-next').classList.add('show');
+  }
+
+  document.getElementById('btn-next').onclick = function() {
+    currentIndex++;
+    if (currentIndex < TOTAL_QUESTIONS) {
+      renderQuestion();
+    } else {
+      showResult();
+    }
+  };
+
+  document.getElementById('btn-quit').onclick = function() {
+    showScreen('screen-select');
+  };
+
+  function showResult() {
+    showScreen('screen-result');
+    document.getElementById('result-mode-name').textContent = '【' + getModeLabel(currentMode) + '】の けっか';
+    document.getElementById('score-text').textContent = TOTAL_QUESTIONS + 'もん中 ' + correctCount + 'もん せいかい！';
+
+    var perfectArea = document.getElementById('perfect-area');
+    var wrongBox = document.getElementById('wrong-list-box');
+    var wrongList = document.getElementById('wrong-list');
+
+    if (wrongHistory.length === 0) {
+      perfectArea.style.display = 'block';
+      wrongBox.style.display = 'none';
+    } else {
+      perfectArea.style.display = 'none';
+      wrongBox.style.display = 'block';
+      wrongList.innerHTML = '';
+      wrongHistory.forEach(function(item) {
+        var div = document.createElement('div');
+        div.className = 'wrong-item';
+        div.innerHTML = item.formula + ' ＝ <span class="ans-highlight">' + item.ans + '</span> <span style="font-size:14px; color:#777;">（えらんだこたえ：' + item.yourAns + '）</span>';
+        wrongList.appendChild(div);
+      });
+    }
+  }
+
+  document.getElementById('btn-retry').onclick = function() {
+    startQuiz(currentMode);
+  };
+
+  document.getElementById('btn-home').onclick = function() {
+    showScreen('screen-select');
+  };
+
+  // 先生用URL生成パネル
+  document.getElementById('toggle-teacher').onclick = function() {
+    document.getElementById('teacher-box').classList.toggle('open');
+  };
+
+  document.getElementById('generate-url-btn').onclick = function() {
+    var val = document.getElementById('preset-select').value;
+    var baseUrl = window.location.origin + window.location.pathname;
+    var fullUrl = baseUrl + '?d=' + encodeURIComponent(val);
+    var urlBox = document.getElementById('generated-url-box');
+    urlBox.value = fullUrl;
+    urlBox.select();
+    try {
+      document.execCommand('copy');
+      document.getElementById('copy-msg').textContent = 'URLを作成・コピーしました！ロイロノートに貼ってください。';
+    } catch (e) {
+      document.getElementById('copy-msg').textContent = '上の枠内のURLをコピーしてロイロノートに貼ってください。';
+    }
+  };
+
+  // URLパラメータ ?d= の判定（例: ?d=3, ?d=2-5, ?d=all）
+  var urlParams = new URLSearchParams(window.location.search);
+  var dParam = urlParams.get('d');
+  if (dParam) {
+    var cleanParam = dParam.trim().toLowerCase();
+    var validModes = ['1','2','3','4','5','6','7','8','9','2-5','6-9','all'];
+    if (validModes.indexOf(cleanParam) !== -1) {
+      startQuiz(cleanParam);
+    }
+  }
+})();
+</script>
+</body>
+</html>
